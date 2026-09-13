@@ -4,11 +4,17 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.mjs",
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/index.js",
+    "seed:members": "node scripts/seed-members.mjs",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "latest",
+    "@aws-sdk/lib-dynamodb": "latest"
   },
   "devDependencies": {
     "@types/aws-lambda": "latest",
+    "@types/node": "^26.5.1",
     "esbuild": "latest",
     "typescript": "latest"
   }

@@ -1,0 +1,9 @@
+[
+  {
+    "memberId": "your-name",
+    "displayName": "Your name",
+    "vehicleSeats": 5,
+    "pin": "PIN_TO_REPLACE",
+    "isAdmin": true
+  }
+]

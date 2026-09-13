@@ -32,3 +32,38 @@ section {
   background: #fff;
   box-shadow: 0 10px 35px rgb(19 43 58 / 10%);
 }
+
+h2 { margin-top: 0; }
+
+.helper, .notice { line-height: 1.5; }
+
+form { display: grid; gap: 1rem; }
+
+label, fieldset { display: grid; gap: 0.4rem; font-weight: 650; }
+
+input, select, textarea, button {
+  font: inherit;
+  padding: 0.65rem;
+  border: 1px solid #9aafaa;
+  border-radius: 0.45rem;
+}
+
+textarea { min-height: 5rem; resize: vertical; }
+
+fieldset { border: 0; padding: 0; }
+
+legend { margin-bottom: 0.4rem; }
+
+.days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+
+.checkbox { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
+
+.checkbox input { width: 1.1rem; height: 1.1rem; padding: 0; }
+
+.drive-option { margin-top: 0.25rem; }
+
+button { background: #287257; border-color: #287257; color: white; cursor: pointer; font-weight: 700; }
+
+button:disabled { cursor: not-allowed; opacity: 0.65; }
+
+.notice { margin: 0; color: #18503c; font-weight: 600; }

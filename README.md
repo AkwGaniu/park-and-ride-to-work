@@ -37,6 +37,18 @@ terraform apply
 
 The first deployment publishes a health-check API and a placeholder frontend. The next phase adds members and weekly availability.
 
+## Seed members locally
+
+Copy `backend/scripts/members.example.json` to `backend/scripts/members.json`, replace the placeholder values, then run:
+
+```bash
+cd backend
+MEMBERS_TABLE=$(cd ../infrastructure && terraform output -raw members_table_name) \
+  npm run seed:members -- --file scripts/members.json
+```
+
+`members.json` is ignored by Git. PINs are converted to a salted scrypt hash before they are stored in DynamoDB.
+
 ## Cost guardrails
 
 The infrastructure uses on-demand DynamoDB, Lambda on ARM64, a short CloudWatch retention period, and a low API Gateway throttle. Set `budget_alert_email` in `terraform.tfvars` to enable a small monthly AWS Budget alert.
