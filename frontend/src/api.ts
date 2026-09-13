@@ -6,6 +6,14 @@ export type Member = {
   vehicleSeats: number;
 };
 
+export type RotaEntry = {
+  day: Day;
+  attendees: Member[];
+  drivers: Member[];
+  totalSeats: number;
+  warning?: string;
+};
+
 const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
 
 function configuredApiUrl(): string {
@@ -37,6 +45,17 @@ export function submitAvailability(input: {
 }) {
   return request(`/availability/${input.weekStart}/${encodeURIComponent(input.memberId)}`, {
     method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export function getRota(weekStart: string): Promise<RotaEntry[]> {
+  return request<RotaEntry[]>(`/rotas/${weekStart}`);
+}
+
+export function generateRota(input: { weekStart: string; adminMemberId: string; pin: string }): Promise<{ entries: RotaEntry[] }> {
+  return request(`/rotas/${input.weekStart}/generate`, {
+    method: 'POST',
     body: JSON.stringify(input),
   });
 }

@@ -67,3 +67,13 @@ button { background: #287257; border-color: #287257; color: white; cursor: point
 button:disabled { cursor: not-allowed; opacity: 0.65; }
 
 .notice { margin: 0; color: #18503c; font-weight: 600; }
+
+.rota-list { display: grid; gap: 0.75rem; margin-top: 1.25rem; }
+
+.rota-day { border-top: 1px solid #d7e1dc; padding-top: 0.8rem; }
+
+.rota-day h3, .rota-day p { margin: 0 0 0.45rem; }
+
+.rota-day span { font-weight: 700; }
+
+.warning { color: #8f3d11; font-weight: 700; }

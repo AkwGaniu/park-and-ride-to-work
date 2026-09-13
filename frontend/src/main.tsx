@@ -1,6 +1,6 @@
 import { FormEvent, StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Day, getMembers, Member, submitAvailability } from './api';
+import { Day, generateRota, getMembers, getRota, Member, RotaEntry, submitAvailability } from './api';
 import './styles.css';
 
 const DAYS: { value: Day; label: string }[] = [
@@ -27,6 +27,9 @@ function App() {
   const [reason, setReason] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
+  const [rota, setRota] = useState<RotaEntry[]>([]);
+  const [rotaNotice, setRotaNotice] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     getMembers()
@@ -34,6 +37,12 @@ function App() {
       .catch((error: Error) => setNotice(error.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    getRota(weekStart)
+      .then(setRota)
+      .catch((error: Error) => setRotaNotice(error.message));
+  }, [weekStart]);
 
   function toggleDay(day: Day) {
     setWorkingDays((current) => current.includes(day)
@@ -57,6 +66,21 @@ function App() {
       setNotice('Your schedule has been saved.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to save your schedule.');
+    }
+  }
+
+  async function createRota() {
+    setRotaNotice('');
+    setGenerating(true);
+    try {
+      const result = await generateRota({ weekStart, adminMemberId: memberId, pin });
+      setRota(result.entries);
+      setPin('');
+      setRotaNotice('Weekly rota generated. Review it before sharing it with the group.');
+    } catch (error) {
+      setRotaNotice(error instanceof Error ? error.message : 'Unable to generate the rota.');
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -106,6 +130,24 @@ function App() {
           <button type="submit" disabled={loading || !memberId}>Save my schedule</button>
           {notice && <p className="notice" role="status">{notice}</p>}
         </form>
+      </section>
+      <section aria-labelledby="rota-heading">
+        <h2 id="rota-heading">Weekly rota</h2>
+        <p className="helper">The rota uses the previous four weeks of driving history to prioritise the fairest available driver.</p>
+        <button type="button" onClick={createRota} disabled={generating || !memberId || !pin}>
+          {generating ? 'Generating rota…' : 'Generate rota as administrator'}
+        </button>
+        {rotaNotice && <p className="notice" role="status">{rotaNotice}</p>}
+        {rota.length === 0 && <p className="helper">No rota has been generated for this week yet.</p>}
+        <div className="rota-list">
+          {rota.map((entry) => <article className="rota-day" key={entry.day}>
+            <h3>{DAYS.find((day) => day.value === entry.day)?.label}</h3>
+            <p><strong>{entry.attendees.length}</strong> expected traveller{entry.attendees.length === 1 ? '' : 's'} · <strong>{entry.totalSeats}</strong> available seats</p>
+            <p><span>Drivers:</span> {entry.drivers.length ? entry.drivers.map((driver) => driver.displayName).join(', ') : 'None assigned'}</p>
+            <p><span>Attendees:</span> {entry.attendees.length ? entry.attendees.map((attendee) => attendee.displayName).join(', ') : 'No one scheduled'}</p>
+            {entry.warning && <p className="warning">{entry.warning}</p>}
+          </article>)}
+        </div>
       </section>
     </main>
   );

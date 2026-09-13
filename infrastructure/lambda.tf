@@ -24,6 +24,7 @@ resource "aws_lambda_function" "api" {
     variables = {
       MEMBERS_TABLE      = aws_dynamodb_table.members.name
       AVAILABILITY_TABLE = aws_dynamodb_table.weekly_availability.name
+      ROTAS_TABLE        = aws_dynamodb_table.weekly_rotas.name
     }
   }
 
