@@ -1,0 +1,4 @@
+aws_region = "eu-west-1"
+
+# Uncomment to receive an AWS Budget confirmation email, then cost alerts.
+# budget_alert_email = "you@example.com"
