@@ -262,6 +262,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     const { method } = event.requestContext.http;
     const path = event.rawPath;
 
+    if (method === 'OPTIONS') {
+      return { statusCode: 204, headers, body: '' };
+    }
+
     if (method === 'GET' && path === '/health') {
       return response(200, { status: 'ok', service: 'park-and-ride-api' });
     }

@@ -22,9 +22,12 @@ function configuredApiUrl(): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (init?.body) headers.set('content-type', 'application/json');
+
   const response = await fetch(`${configuredApiUrl()}${path}`, {
-    headers: { 'content-type': 'application/json', ...init?.headers },
     ...init,
+    headers,
   });
   const body = await response.json() as T & { message?: string };
   if (!response.ok) throw new Error(body.message ?? 'Request failed.');
