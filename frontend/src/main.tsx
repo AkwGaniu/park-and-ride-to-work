@@ -159,9 +159,8 @@ function App() {
           <button type="submit" disabled={loading || !memberId || !submissionOpen}>Save my schedule</button>
           {!submissionOpen && <p className="helper">Schedule submission is closed for this week, but the rota remains available to view.</p>}
         </form>
-        {rota.length === 0 && <div className="submission-status">
+        <div className="submission-status">
           <h3>Schedule submissions</h3>
-          <p className="helper">This list hides once a rota is generated.</p>
           <div className="table-wrap">
             <table>
               <thead><tr><th>Member</th><th>Work days</th><th>Driving</th><th>Status</th></tr></thead>
@@ -176,7 +175,7 @@ function App() {
               })}</tbody>
             </table>
           </div>
-        </div>}
+        </div>
       </section>
       <section aria-labelledby="rota-heading">
         <h2 id="rota-heading">Weekly rota</h2>

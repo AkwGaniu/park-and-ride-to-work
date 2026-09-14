@@ -101,3 +101,16 @@ th { font-size: 0.85rem; }
 .rota-day span { font-weight: 700; }
 
 .warning { color: #8f3d11; font-weight: 700; }
+
+@media (max-width: 480px) {
+  .submission-status { margin-top: 1.5rem; }
+
+  .submission-status h3 { font-size: 1rem; }
+
+  .submission-status table { font-size: 0.75rem; }
+
+  .submission-status th,
+  .submission-status td { padding: 0.5rem 0.3rem; }
+
+  .submission-status th { font-size: 0.7rem; }
+}
