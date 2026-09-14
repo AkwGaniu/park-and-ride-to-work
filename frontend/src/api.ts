@@ -14,6 +14,14 @@ export type RotaEntry = {
   warning?: string;
 };
 
+export type Availability = {
+  memberId: string;
+  workingDays: Day[];
+  canDrive: boolean;
+  drivingUnavailableReason?: string;
+  submittedAt: string;
+};
+
 const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
 
 function configuredApiUrl(): string {
@@ -54,6 +62,10 @@ export function submitAvailability(input: {
 
 export function getRota(weekStart: string): Promise<RotaEntry[]> {
   return request<RotaEntry[]>(`/rotas/${weekStart}`);
+}
+
+export function getAvailability(weekStart: string): Promise<Availability[]> {
+  return request<Availability[]>(`/availability/${weekStart}`);
 }
 
 export function generateRota(input: { weekStart: string; adminMemberId: string; pin: string }): Promise<{ entries: RotaEntry[] }> {

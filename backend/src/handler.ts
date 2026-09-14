@@ -74,6 +74,31 @@ function validWeekStart(value: string): boolean {
   return !Number.isNaN(date.valueOf()) && date.getUTCDay() === 1;
 }
 
+function londonDate(): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const value = (type: string) => parts.find((part) => part.type === type)?.value;
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
+function mondayFor(dateValue: string): string {
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return date.toISOString().slice(0, 10);
+}
+
+function submissionsAreOpen(weekStart: string): boolean {
+  const today = londonDate();
+  const currentWeekStart = mondayFor(today);
+  if (weekStart > currentWeekStart) return true;
+  if (weekStart < currentWeekStart) return false;
+  return new Date(`${today}T00:00:00Z`).getUTCDay() === 1;
+}
+
 function validWorkingDays(value: unknown): value is Day[] {
   return Array.isArray(value)
     && value.every((day) => typeof day === 'string' && DAYS.includes(day as Day))
@@ -223,6 +248,7 @@ async function generateRota(weekStart: string, body: AdminRequest) {
 
 async function saveAvailability(weekStart: string, memberId: string, body: AvailabilityRequest) {
   if (!validWeekStart(weekStart)) return response(400, { message: 'weekStart must be a Monday in YYYY-MM-DD format.' });
+  if (!submissionsAreOpen(weekStart)) return response(409, { message: 'Schedule submissions close at the end of Monday for that week.' });
   if (typeof body.pin !== 'string' || !/^\d{4,6}$/.test(body.pin)) return response(400, { message: 'Enter a 4 to 6 digit PIN.' });
   if (!validWorkingDays(body.workingDays)) return response(400, { message: 'workingDays must contain valid day codes.' });
   if (typeof body.canDrive !== 'boolean') return response(400, { message: 'canDrive must be true or false.' });

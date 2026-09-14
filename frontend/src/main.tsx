@@ -1,6 +1,6 @@
-import { FormEvent, StrictMode, useEffect, useState } from 'react';
+import { FormEvent, StrictMode, useEffect, useRef, useState } from 'react';
+import { Availability, Day, generateRota, getAvailability, getMembers, getRota, Member, RotaEntry, submitAvailability } from './api';
 import { createRoot } from 'react-dom/client';
-import { Day, generateRota, getMembers, getRota, Member, RotaEntry, submitAvailability } from './api';
 import './styles.css';
 
 const DAYS: { value: Day; label: string }[] = [
@@ -10,38 +10,63 @@ const DAYS: { value: Day; label: string }[] = [
   { value: 'SUN', label: 'Sunday' },
 ];
 
-function nextMonday(): string {
+type Notice = { kind: 'success' | 'error'; message: string };
+
+function dateValue(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function currentMonday(): string {
   const date = new Date();
-  const offset = (8 - date.getDay()) % 7 || 7;
-  date.setDate(date.getDate() + offset);
-  return date.toISOString().slice(0, 10);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return dateValue(date);
+}
+
+function submissionsAreOpen(weekStart: string): boolean {
+  const currentWeekStart = currentMonday();
+  if (weekStart > currentWeekStart) return true;
+  return weekStart === currentWeekStart && new Date().getDay() === 1;
 }
 
 function App() {
   const [members, setMembers] = useState<Member[]>([]);
   const [memberId, setMemberId] = useState('');
   const [pin, setPin] = useState('');
-  const [weekStart, setWeekStart] = useState(nextMonday);
+  const [weekStart, setWeekStart] = useState(currentMonday);
   const [workingDays, setWorkingDays] = useState<Day[]>([]);
   const [canDrive, setCanDrive] = useState(true);
   const [reason, setReason] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [rota, setRota] = useState<RotaEntry[]>([]);
-  const [rotaNotice, setRotaNotice] = useState('');
+  const [availability, setAvailability] = useState<Availability[]>([]);
   const [generating, setGenerating] = useState(false);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const submissionOpen = submissionsAreOpen(weekStart);
+
+  function showNotice(kind: Notice['kind'], message: string) {
+    setNotice({ kind, message });
+  }
+
+  useEffect(() => {
+    if (notice) noticeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [notice]);
 
   useEffect(() => {
     getMembers()
       .then(setMembers)
-      .catch((error: Error) => setNotice(error.message))
+      .catch((error: Error) => showNotice('error', error.message))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     getRota(weekStart)
       .then(setRota)
-      .catch((error: Error) => setRotaNotice(error.message));
+      .catch((error: Error) => showNotice('error', error.message));
+    getAvailability(weekStart)
+      .then(setAvailability)
+      .catch((error: Error) => showNotice('error', error.message));
   }, [weekStart]);
 
   function toggleDay(day: Day) {
@@ -52,7 +77,7 @@ function App() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice('');
+    setNotice(null);
     try {
       await submitAvailability({
         weekStart,
@@ -63,41 +88,45 @@ function App() {
         drivingUnavailableReason: canDrive ? undefined : reason,
       });
       setPin('');
-      setNotice('Your schedule has been saved.');
+      setAvailability(await getAvailability(weekStart));
+      showNotice('success', 'Your schedule has been saved.');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Unable to save your schedule.');
+      showNotice('error', error instanceof Error ? error.message : 'Unable to save your schedule.');
     }
   }
 
   async function createRota() {
-    setRotaNotice('');
+    setNotice(null);
     setGenerating(true);
     try {
       const result = await generateRota({ weekStart, adminMemberId: memberId, pin });
       setRota(result.entries);
       setPin('');
-      setRotaNotice('Weekly rota generated. Review it before sharing it with the group.');
+      showNotice('success', 'Weekly rota generated. Review it before sharing it with the group.');
     } catch (error) {
-      setRotaNotice(error instanceof Error ? error.message : 'Unable to generate the rota.');
+      showNotice('error', error instanceof Error ? error.message : 'Unable to generate the rota.');
     } finally {
       setGenerating(false);
     }
   }
 
+  const availabilityByMember = new Map(availability.map((entry) => [entry.memberId, entry]));
+
   return (
     <main>
       <p className="eyebrow">Park and Ride to Work</p>
       <h1>Fairer shared journeys, every week.</h1>
-      <p className="intro">
-        Submit your work days, view the group rota, and share driving fairly.
-      </p>
+      <p className="intro">Submit your work days, view the group rota, and share driving fairly.</p>
       <section aria-labelledby="schedule-heading">
         <h2 id="schedule-heading">Submit your work week</h2>
-        <p className="helper">Choose every day you are due to work in the week beginning on Monday.</p>
+        <p className="helper">Schedules for the current week remain open until the end of Monday. Previous weeks can still be selected to view their rota.</p>
+        <div ref={noticeRef} className="notice-anchor">
+          {notice && <p className={`notice ${notice.kind}`} role="alert">{notice.message}</p>}
+        </div>
         <form onSubmit={submit}>
           <label>
             Week beginning
-            <input type="date" value={weekStart} min={nextMonday()} onChange={(event) => setWeekStart(event.target.value)} required />
+            <input type="date" value={weekStart} min="2020-01-06" step="7" onChange={(event) => setWeekStart(event.target.value)} required />
           </label>
           <label>
             Your name
@@ -127,17 +156,32 @@ function App() {
             Reason you cannot drive
             <textarea value={reason} maxLength={160} onChange={(event) => setReason(event.target.value)} required />
           </label>}
-          <button type="submit" disabled={loading || !memberId}>Save my schedule</button>
-          {notice && <p className="notice" role="status">{notice}</p>}
+          <button type="submit" disabled={loading || !memberId || !submissionOpen}>Save my schedule</button>
+          {!submissionOpen && <p className="helper">Schedule submission is closed for this week, but the rota remains available to view.</p>}
         </form>
+        {rota.length === 0 && <div className="submission-status">
+          <h3>Schedule submissions</h3>
+          <p className="helper">This list hides once a rota is generated.</p>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Member</th><th>Work days</th><th>Driving</th><th>Status</th></tr></thead>
+              <tbody>{members.map((member) => {
+                const entry = availabilityByMember.get(member.memberId);
+                return <tr key={member.memberId}>
+                  <td>{member.displayName}</td>
+                  <td>{entry ? entry.workingDays.map((day) => DAYS.find((item) => item.value === day)?.label).join(', ') || 'No days selected' : '—'}</td>
+                  <td>{entry ? entry.canDrive ? 'Available' : 'Unavailable' : '—'}</td>
+                  <td><span className={entry ? 'status submitted' : 'status pending'}>{entry ? 'Submitted' : 'Awaiting'}</span></td>
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </div>}
       </section>
       <section aria-labelledby="rota-heading">
         <h2 id="rota-heading">Weekly rota</h2>
         <p className="helper">The rota uses the previous four weeks of driving history to prioritise the fairest available driver.</p>
-        <button type="button" onClick={createRota} disabled={generating || !memberId || !pin}>
-          {generating ? 'Generating rota…' : 'Generate rota as administrator'}
-        </button>
-        {rotaNotice && <p className="notice" role="status">{rotaNotice}</p>}
+        <button type="button" onClick={createRota} disabled={generating || !memberId || !pin}>{generating ? 'Generating rota…' : 'Generate rota as administrator'}</button>
         {rota.length === 0 && <p className="helper">No rota has been generated for this week yet.</p>}
         <div className="rota-list">
           {rota.map((entry) => <article className="rota-day" key={entry.day}>
@@ -154,7 +198,5 @@ function App() {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <StrictMode><App /></StrictMode>,
 );
